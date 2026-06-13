@@ -67,6 +67,10 @@ class ExecutionPlanItem(Base):
     plan_id = Column(String, ForeignKey("execution_plans.id"), index=True)
     tool_name = Column(String)
     parameters = Column(JSON)
+    
+    # Refinement Tracking for YELLOW state iterations
+    refinement_history = Column(JSON, nullable=True) # e.g. [{"timestamp": "...", "reason": "...", "previous_version": "...", "new_version": "..."}]
+    
     initial_state = Column(String, default="GREEN") # GREEN, YELLOW, RED
     final_state = Column(String, default="GREEN")
     executed = Column(Boolean, default=False)
