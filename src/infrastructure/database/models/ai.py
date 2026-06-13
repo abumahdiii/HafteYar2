@@ -69,7 +69,8 @@ class ExecutionPlanItem(Base):
     parameters = Column(JSON)
     
     # Refinement Tracking for YELLOW state iterations
-    refinement_history = Column(JSON, nullable=True) # e.g. [{"timestamp": "...", "reason": "...", "previous_version": "...", "new_version": "..."}]
+    current_version_index = Column(Integer, default=1)
+    refinement_history = Column(JSON, nullable=True) # e.g. [{"version": 1, "content": "..."}, {"version": 2, "content": "..."}]
     
     initial_state = Column(String, default="GREEN") # GREEN, YELLOW, RED
     final_state = Column(String, default="GREEN")
