@@ -53,7 +53,8 @@ class ExecutionPlan(Base):
     member_id = Column(String, ForeignKey("users.id"), nullable=True)
     context_snapshot = Column(JSON) # e.g. {"team_id": 5, "project_id": 12, "member_id": 33}
     
-    status = Column(String, default="PENDING") # PENDING, APPROVED, EXECUTED
+    # Terminal states: EXECUTED, FAILED, PARTIALLY_EXECUTED, REJECTED
+    status = Column(String, default="PENDING") # PENDING, APPROVED, EXECUTED, FAILED, PARTIALLY_EXECUTED, REJECTED
     created_at = Column(DateTime, default=datetime.utcnow)
     approved_at = Column(DateTime, nullable=True)
     executed_at = Column(DateTime, nullable=True)
