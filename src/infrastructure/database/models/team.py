@@ -29,6 +29,7 @@ class TeamMember(Base):
     team_id = Column(String(32), ForeignKey("teams.id"), nullable=False, index=True)
     user_id = Column(String(32), ForeignKey("users.id"), nullable=False, index=True)
     role = Column(SAEnum(TeamRole), nullable=False, default=TeamRole.MEMBER)
+    has_ai_access = Column(Boolean, default=False)
 
     team = relationship("Team", back_populates="members")
     user = relationship("User", back_populates="team_memberships")

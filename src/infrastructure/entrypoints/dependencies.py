@@ -86,3 +86,8 @@ def get_ai_middleware(db: Session = Depends(get_db)) -> AIMiddleware:
 
 def get_plan_executor(db: Session = Depends(get_db)) -> PlanExecutor:
     return PlanExecutor(db_session=db)
+
+from src.infrastructure.gateways.unified_input import UnifiedInputGateway
+
+def get_unified_input_gateway(ai_middleware: AIMiddleware = Depends(get_ai_middleware)) -> UnifiedInputGateway:
+    return UnifiedInputGateway(ai_middleware=ai_middleware)

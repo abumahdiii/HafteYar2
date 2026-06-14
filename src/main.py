@@ -7,6 +7,7 @@ from src.infrastructure.entrypoints.api.v1.teams import router as teams_router
 from src.infrastructure.entrypoints.api.v1.tasks import router as tasks_router
 from src.infrastructure.entrypoints.api.v1.subscriptions import router as subscriptions_router
 from src.infrastructure.entrypoints.api.v1.ai import router as ai_router
+from src.infrastructure.entrypoints.api.v1.bot_router import router as bot_router
 
 from src.infrastructure.entrypoints.exception_handlers import (
     ResourceNotFoundError, resource_not_found_handler,
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(tasks_router, prefix="/api/v1")
     app.include_router(subscriptions_router, prefix="/api/v1")
     app.include_router(ai_router, prefix="/api/v1")
+    app.include_router(bot_router, prefix="/api/v1")
 
     # Register Exception Handlers
     app.add_exception_handler(ResourceNotFoundError, resource_not_found_handler)

@@ -3,13 +3,127 @@ import os
 from typing import List, Dict, Any, Tuple
 from src.application.ai.llm_provider import BaseLLMProvider
 from sqlalchemy.orm import Session
+from src.infrastructure.database.models.user import User, UserAccount
+from src.infrastructure.database.models.team import TeamMember
 from src.infrastructure.database.models.ai import Conversation, ExecutionPlan, ExecutionPlanItem
+from src.infrastructure.gateways.schemas import AIRequest, GatewayResponse
 from src.domain.utils.ids import generate_id
 
 class AIMiddleware:
     def __init__(self, db_session: Session, llm_provider: BaseLLMProvider = None):
         self.db = db_session
         self.provider = llm_provider
+
+    def _get_or_create_conversation(self, request: AIRequest) -> Conversation:
+        # Lookup UserAccount
+        account = self.db.query(UserAccount).filter_by(
+            provider=request.source, 
+            provider_id=str(request.chat_id)
+        ).first()
+        
+        if not account:
+            # Create user
+            user = User(username=request.username or f"{request.source}_{request.chat_id}")
+            self.db.add(user)
+            self.db.commit()
+            
+            account = UserAccount(user_id=user.id, provider=request.source, provider_id=str(request.chat_id))
+            self.db.add(account)
+            self.db.commit()
+        else:
+            user = account.user
+
+        # Get or create active conversation
+        conv = self.db.query(Conversation).filter_by(
+            user_id=user.id, 
+            channel=request.source
+        ).order_by(Conversation.created_at.desc()).first()
+        
+        if not conv:
+            conv = Conversation(id=generate_id("con"), user_id=user.id, channel=request.source)
+            self.db.add(conv)
+            self.db.commit()
+            
+        return conv
+
+    def _has_pro_access(self, user_id: str, team_id: str) -> bool:
+        if not team_id:
+            return False
+        tm = self.db.query(TeamMember).filter_by(user_id=user_id, team_id=team_id).first()
+        if tm and tm.has_ai_access:
+            return True
+        return False
+
+    def handle_gateway_request(self, request: AIRequest) -> GatewayResponse:
+        """
+        Processes standard AIRequests from UnifiedInputGateway.
+        Resolves conversation context and executes the core logic.
+        """
+        conv = self._get_or_create_conversation(request)
+        conv_id = conv.id
+        text = request.payload.strip()
+
+        # Standard Default Buttons for Telegram
+        default_buttons = [
+            ["تیم‌های من", "تسک‌های من"],
+            ["دستیار هوشمند (Pro)"]
+        ]
+
+        if text == "/start":
+            return GatewayResponse(
+                text="سلام! من دستیار هوشمند هفته‌یار هستم. لطفاً از منو زیر انتخاب کنید یا درخواست خود را متنی بنویسید.",
+                buttons=default_buttons
+            )
+
+        if text == "تیم‌های من":
+            return GatewayResponse(
+                text="بخش تیم‌های من در حال توسعه است.",
+                buttons=default_buttons
+            )
+            
+        if text == "تسک‌های من":
+            return GatewayResponse(
+                text="بخش تسک‌های من در حال توسعه است.",
+                buttons=default_buttons
+            )
+
+        if text == "/status":
+            plan = self.db.query(ExecutionPlan).filter_by(conversation_id=conv_id).order_by(ExecutionPlan.created_at.desc()).first()
+            if plan:
+                return GatewayResponse(text=f"✅ پلان یافت شد.\nوضعیت: {plan.status}", buttons=default_buttons)
+            return GatewayResponse(text="هیچ پلانی یافت نشد.", buttons=default_buttons)
+
+        if text.startswith("/execute"):
+            plan = self.db.query(ExecutionPlan).filter_by(conversation_id=conv_id).order_by(ExecutionPlan.created_at.desc()).first()
+            if not plan:
+                return GatewayResponse(text="هیچ پلانی برای اجرا یافت نشد.", buttons=default_buttons)
+            
+            result = self.execute_plan(plan.id)
+            return GatewayResponse(text=f"نتیجه اجرا: {result.status}", buttons=default_buttons)
+
+        # AI Flow
+        if text == "دستیار هوشمند (Pro)" or not text.startswith("/"):
+            if self._has_pro_access(conv.user_id, conv.active_team_id):
+                if text == "دستیار هوشمند (Pro)":
+                    return GatewayResponse(
+                        text="شما دسترسی Pro دارید! منتظر شنیدن درخواست‌های شما هستم.",
+                        buttons=default_buttons
+                    )
+                # Actual AI generation
+                plan = self.process_user_input(conversation_id=conv_id, user_input=text)
+                return GatewayResponse(
+                    text=f"✅ پلان ایجاد شد.\nشناسه: `{plan.id}`\nوضعیت: {plan.status}",
+                    buttons=default_buttons
+                )
+            else:
+                return GatewayResponse(
+                    text="دسترسی به این بخش نیازمند لایسنس دستیار هوشمند در تیم شماست. لطفاً حساب خود را ارتقاء دهید.",
+                    buttons=default_buttons,
+                    is_pro_upsell=True
+                )
+        
+        # Fallback
+        return GatewayResponse(text="دستور نامعتبر", buttons=default_buttons)
 
     def process_user_input(self, conversation_id: str, user_input: str) -> ExecutionPlan:
         """
