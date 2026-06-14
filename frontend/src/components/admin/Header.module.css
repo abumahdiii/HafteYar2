@@ -1,0 +1,74 @@
+.header {
+  height: 64px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--surface-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: var(--font-semibold);
+  font-size: var(--font-lg);
+  color: var(--foreground);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xl);
+  background-color: var(--muted-bg);
+  color: var(--muted);
+  transition: all var(--transition-fast);
+}
+
+.iconBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--foreground);
+}
+
+.profileBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  border-radius: var(--radius-full);
+  background-color: var(--surface-hover);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.profileBtn:hover {
+  background-color: var(--muted-bg);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-sm);
+  font-weight: var(--font-bold);
+}
+
+.profileName {
+  font-size: var(--font-sm);
+  font-weight: var(--font-medium);
+  color: var(--foreground);
+}

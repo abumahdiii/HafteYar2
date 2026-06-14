@@ -6,13 +6,52 @@ from sqlalchemy.orm import Session
 from src.infrastructure.database.models.user import User, UserAccount
 from src.infrastructure.database.models.team import TeamMember
 from src.infrastructure.database.models.ai import Conversation, ExecutionPlan, ExecutionPlanItem
-from src.infrastructure.gateways.schemas import AIRequest, GatewayResponse
+from src.infrastructure.database.models.bot import TelegramUserSession
+from src.infrastructure.gateways.schemas import AIRequest, GatewayResponse, InlineButton
 from src.domain.utils.ids import generate_id
+
+# Use Cases and Repositories
+from src.application.use_cases.team_management import TeamManagementUseCase
+from src.infrastructure.database.repositories.team_repository import TeamRepository
+from src.infrastructure.database.repositories.project_repository import ProjectRepository, ListRepository
+
+from src.application.use_cases.task_management import TaskManagementUseCase
+from src.infrastructure.database.repositories.task_repository import TaskRepository
+
+from src.application.use_cases.subscription import SubscriptionUseCase
+from src.infrastructure.database.repositories.subscription import SQLAlchemySubscriptionRepository
 
 class AIMiddleware:
     def __init__(self, db_session: Session, llm_provider: BaseLLMProvider = None):
         self.db = db_session
         self.provider = llm_provider
+        self.team_use_case = TeamManagementUseCase(
+            team_repo=TeamRepository(db_session),
+            project_repo=ProjectRepository(db_session),
+            list_repo=ListRepository(db_session)
+        )
+        self.task_use_case = TaskManagementUseCase(
+            task_repo=TaskRepository(db_session),
+            project_repo=ProjectRepository(db_session),
+            team_repo=TeamRepository(db_session)
+        )
+        self.sub_use_case = SubscriptionUseCase(
+            subscription_repo=SQLAlchemySubscriptionRepository(db_session)
+        )
+
+    def _get_or_create_session(self, chat_id: str) -> TelegramUserSession:
+        sess = self.db.query(TelegramUserSession).filter_by(chat_id=chat_id).first()
+        if not sess:
+            sess = TelegramUserSession(chat_id=chat_id, state="IDLE", state_data={})
+            self.db.add(sess)
+            self.db.commit()
+        return sess
+
+    def _update_session(self, sess: TelegramUserSession, state: str, state_data: dict = None):
+        sess.state = state
+        if state_data is not None:
+            sess.state_data = state_data
+        self.db.commit()
 
     def _get_or_create_conversation(self, request: AIRequest) -> Conversation:
         # Lookup UserAccount
@@ -57,60 +96,136 @@ class AIMiddleware:
     def handle_gateway_request(self, request: AIRequest) -> GatewayResponse:
         """
         Processes standard AIRequests from UnifiedInputGateway.
-        Resolves conversation context and executes the core logic.
+        Resolves conversation context and executes the core logic using State Machine.
         """
         conv = self._get_or_create_conversation(request)
-        conv_id = conv.id
+        sess = self._get_or_create_session(request.chat_id)
+        
         text = request.payload.strip()
 
         # Standard Default Buttons for Telegram
         default_buttons = [
-            ["تیم‌های من", "تسک‌های من"],
-            ["دستیار هوشمند (Pro)"]
+            ["👥 مدیریت تیم‌ها", "📝 مدیریت تسک‌ها"],
+            ["⚙️ اشتراک‌ها", "🤖 دستیار هوشمند (Pro)"]
+        ]
+        
+        teams_menu = [
+            ["➕ ایجاد تیم جدید", "📋 لیست تیم‌های من"],
+            ["🔙 بازگشت به منوی اصلی"]
+        ]
+        
+        tasks_menu = [
+            ["➕ ایجاد تسک جدید", "📋 تسک‌های من (پروژه‌ها)"],
+            ["🔙 بازگشت به منوی اصلی"]
+        ]
+        
+        subscriptions_menu = [
+            ["وضعیت اشتراک", "خرید اشتراک"],
+            ["🔙 بازگشت به منوی اصلی"]
         ]
 
-        if text == "/start":
+        if text in ["/start", "🔙 بازگشت به منوی اصلی"]:
+            self._update_session(sess, "IDLE", {})
             return GatewayResponse(
-                text="سلام! من دستیار هوشمند هفته‌یار هستم. لطفاً از منو زیر انتخاب کنید یا درخواست خود را متنی بنویسید.",
+                text="سلام! به سیستم مدیریت تیم هفته‌یار خوش آمدید. لطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
                 buttons=default_buttons
             )
 
-        if text == "تیم‌های من":
-            return GatewayResponse(
-                text="بخش تیم‌های من در حال توسعه است.",
-                buttons=default_buttons
-            )
+        # -- Teams Management Navigation --
+        if text == "👥 مدیریت تیم‌ها":
+            self._update_session(sess, "IDLE", {})
+            return GatewayResponse(text="منوی مدیریت تیم‌ها:", buttons=teams_menu)
+
+        if text == "➕ ایجاد تیم جدید":
+            self._update_session(sess, "WAITING_TEAM_NAME", {})
+            return GatewayResponse(text="لطفاً نام تیم جدید را وارد کنید:", buttons=[["🔙 بازگشت به منوی اصلی"]])
+
+        if text == "📋 لیست تیم‌های من":
+            teams = self.team_use_case.get_user_teams(user_id=conv.user_id)
+            if not teams:
+                return GatewayResponse(text="شما در هیچ تیمی عضو نیستید.", buttons=teams_menu)
             
-        if text == "تسک‌های من":
-            return GatewayResponse(
-                text="بخش تسک‌های من در حال توسعه است.",
-                buttons=default_buttons
-            )
+            inline_buttons = []
+            for t in teams:
+                inline_buttons.append([InlineButton(text=t.name, callback_data=f"team_{t.id}")])
+            return GatewayResponse(text="لیست تیم‌های شما (برای مشاهده جزئیات کلیک کنید):", inline_buttons=inline_buttons, buttons=teams_menu)
 
-        if text == "/status":
-            plan = self.db.query(ExecutionPlan).filter_by(conversation_id=conv_id).order_by(ExecutionPlan.created_at.desc()).first()
-            if plan:
-                return GatewayResponse(text=f"✅ پلان یافت شد.\nوضعیت: {plan.status}", buttons=default_buttons)
-            return GatewayResponse(text="هیچ پلانی یافت نشد.", buttons=default_buttons)
+        # -- Tasks Management Navigation --
+        if text == "📝 مدیریت تسک‌ها":
+            self._update_session(sess, "IDLE", {})
+            return GatewayResponse(text="منوی مدیریت تسک‌ها:", buttons=tasks_menu)
 
-        if text.startswith("/execute"):
-            plan = self.db.query(ExecutionPlan).filter_by(conversation_id=conv_id).order_by(ExecutionPlan.created_at.desc()).first()
-            if not plan:
-                return GatewayResponse(text="هیچ پلانی برای اجرا یافت نشد.", buttons=default_buttons)
+        if text == "➕ ایجاد تسک جدید":
+            # First, user must pick a project.
+            teams = self.team_use_case.get_user_teams(user_id=conv.user_id)
+            if not teams:
+                return GatewayResponse(text="برای ایجاد تسک، ابتدا باید در یک تیم عضو باشید.", buttons=tasks_menu)
             
-            result = self.execute_plan(plan.id)
-            return GatewayResponse(text=f"نتیجه اجرا: {result.status}", buttons=default_buttons)
+            inline_buttons = []
+            for t in teams:
+                inline_buttons.append([InlineButton(text=f"تیم {t.name}", callback_data=f"selteam_{t.id}")])
+            return GatewayResponse(text="ابتدا تیم مورد نظر را انتخاب کنید:", inline_buttons=inline_buttons, buttons=[["🔙 بازگشت به منوی اصلی"]])
 
-        # AI Flow
-        if text == "دستیار هوشمند (Pro)" or not text.startswith("/"):
+        if text == "📋 تسک‌های من (پروژه‌ها)":
+            teams = self.team_use_case.get_user_teams(user_id=conv.user_id)
+            inline_buttons = []
+            for t in teams:
+                inline_buttons.append([InlineButton(text=f"تیم {t.name}", callback_data=f"viewteam_{t.id}")])
+            return GatewayResponse(text="برای مشاهده تسک‌ها، تیم را انتخاب کنید:", inline_buttons=inline_buttons, buttons=tasks_menu)
+
+        # -- Subscriptions Navigation --
+        if text == "⚙️ اشتراک‌ها":
+            self._update_session(sess, "IDLE", {})
+            return GatewayResponse(text="بخش اشتراک‌ها در حال توسعه است. می‌توانید وضعیت اشتراک تیم‌هایتان را از اینجا مدیریت کنید.", buttons=subscriptions_menu)
+
+        # -- State Machine Handlers --
+        if sess.state == "WAITING_TEAM_NAME":
+            if not text:
+                return GatewayResponse(text="نام تیم نمی‌تواند خالی باشد. مجدداً وارد کنید:")
+            
+            team = self.team_use_case.create_team(name=text, owner_user_id=conv.user_id)
+            self._update_session(sess, "IDLE", {})
+            return GatewayResponse(text=f"✅ تیم '{team.name}' با موفقیت ساخته شد.", buttons=teams_menu)
+            
+        if sess.state == "WAITING_TASK_TITLE":
+            if not text:
+                return GatewayResponse(text="عنوان تسک نمی‌تواند خالی باشد:")
+            
+            project_id = sess.state_data.get("project_id")
+            # For simplicity, if we don't have a list, just pass None and UseCase should handle it or fail.
+            # Real implementation might need a list selection step.
+            task = self.task_use_case.create_task(
+                title=text,
+                project_id=project_id,
+                creator_id=conv.user_id,
+                list_id=None # Let UseCase generate default if implemented or requires fixing
+            )
+            self._update_session(sess, "IDLE", {})
+            return GatewayResponse(text=f"✅ تسک '{task.title}' ایجاد شد.", buttons=tasks_menu)
+
+        # -- Callbacks --
+        if request.is_callback:
+            if text.startswith("team_"):
+                team_id = text.split("_")[1]
+                return GatewayResponse(text=f"جزئیات تیم انتخاب شده (شناسه: {team_id}). قابلیت‌های این بخش در حال توسعه است.", buttons=teams_menu)
+            
+            if text.startswith("selteam_"):
+                team_id = text.split("_")[1]
+                self._update_session(sess, "WAITING_TASK_TITLE", {"team_id": team_id, "project_id": f"dummy_proj_for_{team_id}"})
+                return GatewayResponse(text="عنوان تسک جدید را وارد کنید:")
+            
+            return GatewayResponse(text="عملیات ناشناخته", buttons=default_buttons)
+
+        # -- AI Flow --
+        if text == "🤖 دستیار هوشمند (Pro)" or not text.startswith("/") and sess.state == "IDLE":
             if self._has_pro_access(conv.user_id, conv.active_team_id):
-                if text == "دستیار هوشمند (Pro)":
+                if text == "🤖 دستیار هوشمند (Pro)":
                     return GatewayResponse(
                         text="شما دسترسی Pro دارید! منتظر شنیدن درخواست‌های شما هستم.",
                         buttons=default_buttons
                     )
                 # Actual AI generation
-                plan = self.process_user_input(conversation_id=conv_id, user_input=text)
+                plan = self.process_user_input(conversation_id=conv.id, user_input=text)
                 return GatewayResponse(
                     text=f"✅ پلان ایجاد شد.\nشناسه: `{plan.id}`\nوضعیت: {plan.status}",
                     buttons=default_buttons

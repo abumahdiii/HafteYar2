@@ -14,3 +14,12 @@ class TeamResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TeamUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    subscription_expiry: Optional[datetime] = None
+
+class TeamListResponse(BaseModel):
+    items: List[TeamResponse]
+    total: int

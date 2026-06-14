@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.orm import Session
 from src.application.interfaces.repositories import IUserRepository
 from src.domain.entities.user import UserEntity, UserAccountEntity
@@ -14,6 +14,8 @@ class UserRepository(IUserRepository):
             username=model.username,
             email=model.email,
             phone=model.phone,
+            password_hash=model.password_hash,
+            is_admin=model.is_admin,
             created_at=model.created_at,
             accounts=[
                 UserAccountEntity(
@@ -31,8 +33,16 @@ class UserRepository(IUserRepository):
             username=entity.username,
             email=entity.email,
             phone=entity.phone,
+            password_hash=entity.password_hash,
+            is_admin=entity.is_admin,
             created_at=entity.created_at
         )
+
+    def get_by_username(self, username: str) -> Optional[UserEntity]:
+        user_model = self.db.query(User).filter(User.username == username).first()
+        if user_model:
+            return self._to_entity(user_model)
+        return None
 
     def get_by_id(self, user_id: str) -> Optional[UserEntity]:
         user_model = self.db.query(User).filter(User.id == user_id).first()
@@ -62,3 +72,10 @@ class UserRepository(IUserRepository):
         self.db.commit()
         self.db.refresh(user_model)
         return self._to_entity(user_model)
+
+    def get_all(self, skip: int = 0, limit: int = 50) -> List[UserEntity]:
+        users = self.db.query(User).offset(skip).limit(limit).all()
+        return [self._to_entity(u) for u in users]
+
+    def count(self) -> int:
+        return self.db.query(User).count()

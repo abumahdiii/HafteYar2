@@ -17,3 +17,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     is_new_user: bool = False
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str

@@ -16,12 +16,32 @@ class IUserRepository(ABC):
         pass
 
     @abstractmethod
+    def get_by_username(self, username: str) -> Optional[UserEntity]:
+        pass
+
+    @abstractmethod
     def create(self, user: UserEntity) -> UserEntity:
+        pass
+
+    @abstractmethod
+    def get_all(self, skip: int = 0, limit: int = 50) -> List[UserEntity]:
+        pass
+
+    @abstractmethod
+    def count(self) -> int:
         pass
 
 class ITeamRepository(ABC):
     @abstractmethod
     def get_by_id(self, team_id: str) -> Optional[TeamEntity]:
+        pass
+
+    @abstractmethod
+    def get_all(self, skip: int = 0, limit: int = 50) -> List[TeamEntity]:
+        pass
+
+    @abstractmethod
+    def count(self) -> int:
         pass
 
     @abstractmethod

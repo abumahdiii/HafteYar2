@@ -19,7 +19,6 @@ class Team(Base):
     ai_execution_mode = Column(String, default="ALWAYS_REVIEW") # ALWAYS_REVIEW, REVIEW_CRITICAL_ONLY, AUTO_EXECUTE
 
     members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
-    subscriptions = relationship("Subscription", back_populates="team", cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="team", cascade="all, delete-orphan")
 
 class TeamMember(Base):

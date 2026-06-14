@@ -42,6 +42,28 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
         raise credentials_exception
     return user_id
 
+def get_current_admin(token: str = Depends(oauth2_scheme)) -> str:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    access_denied = HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Access denied",
+    )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        role: str = payload.get("role")
+        if user_id is None:
+            raise credentials_exception
+        if role != "admin":
+            raise access_denied
+    except JWTError:
+        raise credentials_exception
+    return user_id
+
 def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
     return UserRepository(db)
 

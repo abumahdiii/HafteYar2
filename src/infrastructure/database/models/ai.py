@@ -11,6 +11,13 @@ class Conversation(Base):
     active_team_id = Column(String, ForeignKey("teams.id"), nullable=True)
     active_project_id = Column(String, ForeignKey("projects.id"), nullable=True)
     active_member_id = Column(String, ForeignKey("users.id"), nullable=True)
+    
+    # Support Center Fields
+    status = Column(String, default="OPEN") # OPEN, CLOSED, PENDING
+    assigned_to = Column(String, ForeignKey("users.id"), nullable=True)
+    tags = Column(JSON, nullable=True) # list of tags
+    last_message_at = Column(DateTime, default=datetime.utcnow)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     
     messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan")

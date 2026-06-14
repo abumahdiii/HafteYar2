@@ -1,0 +1,47 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.statContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.statLabel {
+  font-size: var(--font-sm);
+  color: var(--muted);
+  font-weight: var(--font-medium);
+}
+
+.statValue {
+  font-size: var(--font-4xl);
+  font-weight: var(--font-bold);
+  color: var(--foreground);
+}
+
+.statBadge {
+  position: absolute;
+  top: var(--space-6);
+  left: var(--space-6);
+}
+
+.sectionTitle {
+  font-size: var(--font-xl);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-4);
+  color: var(--foreground);
+}
+
+.recentActivity {
+  margin-top: var(--space-4);
+}

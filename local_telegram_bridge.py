@@ -56,6 +56,7 @@ if __name__ == "__main__":
     from src.infrastructure.database.models.project import Project
     from src.infrastructure.database.models.task import Task
     from src.infrastructure.database.models.ai import Conversation, ExecutionPlan
+    from src.infrastructure.database.models.bot import TelegramUserSession
     Base.metadata.create_all(engine)
 
     # Run the polling bridge in a background thread

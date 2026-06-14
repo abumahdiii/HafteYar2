@@ -9,6 +9,7 @@ class TeamMemberEntity:
     team_id: str
     user_id: str
     role: TeamRole
+    has_ai_access: bool = False
 
 @dataclass
 class TeamEntity:

@@ -1,0 +1,88 @@
+/* 
+  Theme Variables
+  These define the semantic colors used across the application.
+*/
+
+:root {
+  /* Light Theme (Default) */
+  --background: #f8fafc; /* Slate 50 */
+  --foreground: #0f172a; /* Slate 900 */
+  
+  --primary: #2563eb;    /* Blue 600 */
+  --primary-hover: #1d4ed8;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #64748b;  /* Slate 500 */
+  --secondary-hover: #475569;
+  --secondary-foreground: #ffffff;
+
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --surface-border: #e2e8f0; /* Slate 200 */
+
+  --muted: #64748b;      /* Slate 500 */
+  --muted-bg: #f1f5f9;   /* Slate 100 */
+
+  --success: #10b981;    /* Emerald 500 */
+  --success-bg: #d1fae5;
+  --success-foreground: #047857;
+
+  --warning: #f59e0b;    /* Amber 500 */
+  --warning-bg: #fef3c7;
+  --warning-foreground: #b45309;
+
+  --danger: #ef4444;     /* Red 500 */
+  --danger-bg: #fee2e2;
+  --danger-foreground: #b91c1c;
+
+  --info: #3b82f6;       /* Blue 500 */
+  --info-bg: #dbeafe;
+  --info-foreground: #1d4ed8;
+  
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-active-bg: #f1f5f9;
+  --sidebar-active-fg: #0f172a;
+}
+
+[data-theme='dark'] {
+  /* Dark Theme */
+  --background: #020617; /* Slate 950 */
+  --foreground: #f8fafc; /* Slate 50 */
+  
+  --primary: #3b82f6;    /* Blue 500 */
+  --primary-hover: #60a5fa;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #94a3b8;  /* Slate 400 */
+  --secondary-hover: #cbd5e1;
+  --secondary-foreground: #0f172a;
+
+  --surface: #0f172a;    /* Slate 900 */
+  --surface-hover: #1e293b;
+  --surface-border: #1e293b; /* Slate 800 */
+
+  --muted: #94a3b8;      /* Slate 400 */
+  --muted-bg: #1e293b;   /* Slate 800 */
+
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.1);
+  --success-foreground: #34d399;
+
+  --warning: #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --warning-foreground: #fbbf24;
+
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --danger-foreground: #f87171;
+
+  --info: #3b82f6;
+  --info-bg: rgba(59, 130, 246, 0.1);
+  --info-foreground: #60a5fa;
+  
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --sidebar-active-bg: #1e293b;
+  --sidebar-active-fg: #f8fafc;
+}

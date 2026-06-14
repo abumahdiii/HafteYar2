@@ -1,0 +1,120 @@
+.sidebar {
+  width: 260px;
+  background-color: var(--sidebar-bg);
+  border-left: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  transition: width var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.logoContainer {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.logoText {
+  font-weight: var(--font-bold);
+  font-size: var(--font-lg);
+  color: var(--primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.collapseBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  background-color: transparent;
+  transition: background-color var(--transition-fast);
+}
+
+.collapseBtn:hover {
+  background-color: var(--muted-bg);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  gap: var(--space-2);
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.navItem:hover {
+  background-color: var(--muted-bg);
+  color: var(--foreground);
+}
+
+.navItem.active {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-fg);
+  font-weight: var(--font-medium);
+}
+
+.icon {
+  font-size: var(--font-xl);
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  margin-right: var(--space-3);
+  opacity: 1;
+  transition: opacity var(--transition-normal);
+}
+
+.collapsed .label {
+  opacity: 0;
+  display: none;
+}
+
+.footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--sidebar-border);
+}
+
+.logoutBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.logoutBtn:hover {
+  background-color: var(--danger-bg);
+}
+
+.collapsed .logoutBtn {
+  justify-content: center;
+}

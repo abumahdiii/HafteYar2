@@ -27,3 +27,8 @@ class TaskResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+from typing import List
+class TaskListResponse(BaseModel):
+    items: List[TaskResponse]
+    total: int

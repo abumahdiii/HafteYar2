@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from src.infrastructure.entrypoints.schemas.auth_schemas import (
-    SendOtpRequest, SendOtpResponse, VerifyOtpRequest, TokenResponse
+    SendOtpRequest, SendOtpResponse, VerifyOtpRequest, TokenResponse, AdminLoginRequest
 )
 from src.application.use_cases.auth import AuthUseCase
 from src.infrastructure.entrypoints.dependencies import get_auth_use_case
@@ -47,3 +47,11 @@ def login_verify_otp(
 ):
     token, is_new = use_case.verify_otp(request.phone, request.code, OtpPurpose.LOGIN)
     return TokenResponse(access_token=token, is_new_user=is_new)
+
+@router.post("/admin/login", response_model=TokenResponse)
+def admin_login(
+    request: AdminLoginRequest,
+    use_case: AuthUseCase = Depends(get_auth_use_case)
+):
+    token = use_case.admin_login(request.username, request.password)
+    return TokenResponse(access_token=token, is_new_user=False)

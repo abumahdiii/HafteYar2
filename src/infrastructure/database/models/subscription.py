@@ -30,10 +30,13 @@ class PlanFeature(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
     id = Column(String, primary_key=True, index=True)
-    team_id = Column(String, ForeignKey("teams.id"), index=True)
+    
+    # Polymorphic Owner: User or Team
+    owner_type = Column(String, nullable=False, index=True) # 'USER' or 'TEAM'
+    owner_id = Column(String, nullable=False, index=True)
+    
     plan_id = Column(String, ForeignKey("subscription_plans.id"))
     starts_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime)
     
-    team = relationship("Team", back_populates="subscriptions")
     plan = relationship("SubscriptionPlan")

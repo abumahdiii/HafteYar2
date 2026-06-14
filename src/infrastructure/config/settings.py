@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 
 class Settings(BaseSettings):
+    DEV_MODE: bool = Field(default=True, env="DEV_MODE")
     ENV: str = "dev"
     DATABASE_URL: str = Field(default="sqlite:///./haftyar.db", env="DATABASE_URL")
     SECRET_KEY: str = "change-this-secret-key-in-production"

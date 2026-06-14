@@ -20,7 +20,8 @@ class TeamRepository(ITeamRepository):
                     id=mem.id,
                     team_id=mem.team_id,
                     user_id=mem.user_id,
-                    role=mem.role
+                    role=mem.role,
+                    has_ai_access=mem.has_ai_access
                 ) for mem in model.members
             ]
         )
@@ -42,6 +43,13 @@ class TeamRepository(ITeamRepository):
         )
         return [self._to_entity(t) for t in team_models]
 
+    def get_all(self, skip: int = 0, limit: int = 50) -> List[TeamEntity]:
+        teams = self.db.query(Team).offset(skip).limit(limit).all()
+        return [self._to_entity(t) for t in teams]
+
+    def count(self) -> int:
+        return self.db.query(Team).count()
+
     def create(self, team: TeamEntity) -> TeamEntity:
         team_model = Team(
             id=team.id,
@@ -57,7 +65,8 @@ class TeamRepository(ITeamRepository):
                 id=mem.id,
                 team_id=mem.team_id,
                 user_id=mem.user_id,
-                role=mem.role
+                role=mem.role,
+                has_ai_access=mem.has_ai_access
             )
             self.db.add(mem_model)
             

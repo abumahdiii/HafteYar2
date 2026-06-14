@@ -43,3 +43,39 @@ class ExecutePlanResponse(BaseModel):
     executed_items_count: int
     failed_items_count: int
     details: Dict[str, Any]
+
+class MessageResponse(BaseModel):
+    id: str
+    role: str
+    type: str
+    content: Optional[str]
+    created_at: Any
+
+    class Config:
+        from_attributes = True
+
+class ConversationResponse(BaseModel):
+    id: str
+    user_id: str
+    channel: str
+    status: str
+    assigned_to: Optional[str]
+    tags: Optional[List[str]]
+    last_message_at: Any
+    created_at: Any
+
+    class Config:
+        from_attributes = True
+
+class ConversationListResponse(BaseModel):
+    items: List[ConversationResponse]
+    total: int
+
+class ConversationUpdateRequest(BaseModel):
+    status: Optional[str] = None
+    assigned_to: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+class MessageCreateRequest(BaseModel):
+    content: str
+

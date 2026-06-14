@@ -1,0 +1,73 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background);
+  padding: 24px;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 400px;
+}
+
+.header {
+  text-align: center;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.submitBtn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.phoneDisplay {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.linkBtn {
+  color: var(--primary);
+  font-size: 0.75rem;
+  margin-right: 8px;
+  text-decoration: underline;
+}
+
+.errorAlert {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.infoAlert {
+  background-color: rgba(37, 99, 235, 0.1);
+  color: var(--primary);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  text-align: center;
+}

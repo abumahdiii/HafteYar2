@@ -1,0 +1,63 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.secondary {
+  background-color: var(--muted-bg);
+  color: var(--foreground);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: #e2e8f0;
+}
+
+.outline {
+  background-color: transparent;
+  border-color: var(--sidebar-border);
+  color: var(--foreground);
+}
+
+.outline:hover:not(:disabled) {
+  background-color: var(--muted-bg);
+}
+
+.danger {
+  background-color: var(--danger);
+  color: white;
+}
+
+.loader {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -7,7 +7,7 @@ from src.domain.entities.enums import OtpPurpose
 from src.domain.entities.user import UserEntity, UserAccountEntity
 from src.domain.utils.phone import normalize_phone
 from src.domain.utils.security import get_password_hash, verify_password, create_access_token
-from src.domain.exceptions import InvalidOperationError, ResourceNotFoundError, RateLimitExceededError
+from src.domain.exceptions import InvalidOperationError, ResourceNotFoundError, RateLimitExceededError, AccessDeniedError
 from src.infrastructure.config.settings import settings
 from src.domain.utils.ids import new_account_id
 
@@ -35,8 +35,12 @@ class AuthUseCase:
         if purpose == OtpPurpose.LOGIN and not user:
             raise ResourceNotFoundError("No user found with this phone number.")
 
-        # Generate 6 digit code
-        code = str(secrets.randbelow(1_000_000)).zfill(6)
+        # Generate 6 digit code or use fixed code in DEV_MODE
+        if settings.DEV_MODE:
+            code = "9763"
+        else:
+            code = str(secrets.randbelow(1_000_000)).zfill(6)
+            
         code_hash = get_password_hash(code)
 
         # Save to DB
@@ -99,3 +103,17 @@ class AuthUseCase:
 
         access_token = create_access_token(data={"sub": user.id})
         return access_token, is_new_user
+
+    def admin_login(self, username: str, password: str) -> str:
+        """
+        Verifies admin credentials and returns access_token.
+        """
+        user = self.user_repo.get_by_username(username)
+        if not user or not user.is_admin:
+            raise AccessDeniedError("Invalid username or password.")
+        
+        if not user.password_hash or not verify_password(password, user.password_hash):
+            raise AccessDeniedError("Invalid username or password.")
+            
+        access_token = create_access_token(data={"sub": user.id, "role": "admin"})
+        return access_token

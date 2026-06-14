@@ -33,22 +33,49 @@ class TelegramAdapter(BaseBotAdapter):
             return f"✅ پلان ایجاد شد.\nشناسه: `{plan_or_status.id}`\nتعداد تسک‌ها: {len(plan_or_status.items)}\nوضعیت: {plan_or_status.status}"
         return str(plan_or_status)
 
+    def answer_callback_query(self, callback_query_id: str, text: str = None) -> None:
+        """Answers a callback query to stop the loading circle on the user's side."""
+        url = f"{self.api_url}/answerCallbackQuery"
+        payload = {"callback_query_id": callback_query_id}
+        if text:
+            payload["text"] = text
+        try:
+            with httpx.Client() as client:
+                client.post(url, json=payload, timeout=5.0)
+        except Exception as e:
+            print(f"Error answering callback query: {e}")
+
     def receive_message_handler(self, payload: dict) -> None:
         """Main processing method that runs in background."""
-        if "message" not in payload:
-            return
+        is_callback = False
+        callback_id = None
+        
+        if "callback_query" in payload:
+            cb = payload["callback_query"]
+            message = cb.get("message", {})
+            chat_id = str(message.get("chat", {}).get("id"))
+            text = cb.get("data", "")
+            username = cb.get("from", {}).get("username")
+            is_callback = True
+            callback_id = cb.get("id")
             
-        message = payload["message"]
-        chat_id = str(message.get("chat", {}).get("id"))
-        text = message.get("text", "").strip()
-        username = message.get("from", {}).get("username")
+            # Immediately answer callback to stop loading circle
+            self.answer_callback_query(callback_id)
+            
+        elif "message" in payload:
+            message = payload["message"]
+            chat_id = str(message.get("chat", {}).get("id"))
+            text = message.get("text", "").strip()
+            username = message.get("from", {}).get("username")
+        else:
+            return
 
         if not chat_id or not text:
             return
 
-        print(f"[Telegram] Received from {chat_id}: {text}")
+        print(f"[Telegram] Received from {chat_id}: {text} (Callback: {is_callback})")
         
-        if text != "/start" and text != "/status" and not text.startswith("/execute"):
+        if not is_callback and text != "/start" and text != "/status" and not text.startswith("/execute"):
             self.send_message(chat_id, "در حال پردازش درخواست شما...")
 
         request = AIRequest(
@@ -57,6 +84,8 @@ class TelegramAdapter(BaseBotAdapter):
             user_id=None,
             username=username,
             payload=text,
+            is_callback=is_callback,
+            callback_id=callback_id,
             metadata={"update_id": payload.get("update_id")}
         )
 
@@ -65,7 +94,10 @@ class TelegramAdapter(BaseBotAdapter):
             
             if isinstance(response, GatewayResponse):
                 reply_markup = None
-                if response.buttons:
+                if response.inline_buttons:
+                    keyboard = [[{"text": btn.text, "callback_data": btn.callback_data} for btn in row] for row in response.inline_buttons]
+                    reply_markup = {"inline_keyboard": keyboard}
+                elif response.buttons:
                     keyboard = [[{"text": btn} for btn in row] for row in response.buttons]
                     reply_markup = {
                         "keyboard": keyboard,

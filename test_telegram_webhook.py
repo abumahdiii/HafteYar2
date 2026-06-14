@@ -16,6 +16,7 @@ from src.infrastructure.database.session import Base
 from src.infrastructure.database.models.user import User, UserAccount
 from src.infrastructure.database.models.team import Team, TeamMember
 from src.infrastructure.database.models.ai import Conversation, ExecutionPlan, ExecutionPlanItem
+from src.infrastructure.database.models.bot import TelegramUserSession
 
 from src.main import app
 from fastapi.testclient import TestClient
@@ -79,7 +80,7 @@ class TestTelegramHybridSubscription(unittest.TestCase):
             
             self.assertEqual(len(captured_payloads), 1)
             msg1 = captured_payloads[0]
-            self.assertIn("سلام! من دستیار هوشمند", msg1["text"])
+            self.assertIn("سیستم مدیریت تیم هفته‌یار", msg1["text"])
             self.assertIn("reply_markup", msg1)
             self.assertTrue(any("تیم" in str(btn) for row in msg1["reply_markup"]["keyboard"] for btn in row))
             
@@ -119,7 +120,7 @@ class TestTelegramHybridSubscription(unittest.TestCase):
             # 4. Test free text as Pro User
             payload3 = {
                 "update_id": 3,
-                "message": {"chat": {"id": 111}, "text": "دستیار هوشمند (Pro)", "from": {"username": "user1"}}
+                "message": {"chat": {"id": 111}, "text": "🤖 دستیار هوشمند (Pro)", "from": {"username": "user1"}}
             }
             captured_payloads.clear()
             self.client.post("/api/v1/bot/telegram/webhook", json=payload3)

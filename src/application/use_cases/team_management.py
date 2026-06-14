@@ -30,7 +30,8 @@ class TeamManagementUseCase:
             id=new_member_id(),
             team_id=team_id,
             user_id=owner_user_id,
-            role=TeamRole.OWNER
+            role=TeamRole.OWNER,
+            has_ai_access=True
         )
 
         team = TeamEntity(

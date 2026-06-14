@@ -11,6 +11,8 @@ class User(Base):
     username = Column(String, unique=True, nullable=True, index=True)
     email = Column(String, unique=True, nullable=True, index=True)
     phone = Column(String(11), unique=True, nullable=True, index=True)
+    password_hash = Column(String, nullable=True)
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     accounts = relationship("UserAccount", back_populates="user", cascade="all, delete-orphan")
