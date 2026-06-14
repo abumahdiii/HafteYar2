@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, status
+import os
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
@@ -76,8 +77,12 @@ def get_subscription_use_case(db: Session = Depends(get_db)) -> SubscriptionUseC
         subscription_repo=SQLAlchemySubscriptionRepository(db)
     )
 
+from src.application.ai.llm_provider import GeminiProvider
+
 def get_ai_middleware(db: Session = Depends(get_db)) -> AIMiddleware:
-    return AIMiddleware(db_session=db)
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    provider = GeminiProvider(api_key=api_key)
+    return AIMiddleware(db_session=db, llm_provider=provider)
 
 def get_plan_executor(db: Session = Depends(get_db)) -> PlanExecutor:
     return PlanExecutor(db_session=db)

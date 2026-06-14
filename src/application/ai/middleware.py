@@ -1,20 +1,15 @@
 import json
 import os
-from openai import OpenAI
 from typing import List, Dict, Any, Tuple
+from src.application.ai.llm_provider import BaseLLMProvider
 from sqlalchemy.orm import Session
 from src.infrastructure.database.models.ai import Conversation, ExecutionPlan, ExecutionPlanItem
 from src.domain.utils.ids import generate_id
 
 class AIMiddleware:
-    def __init__(self, db_session: Session):
+    def __init__(self, db_session: Session, llm_provider: BaseLLMProvider = None):
         self.db = db_session
-        api_key = os.environ.get("GAPGPT_API_KEY", "dummy_key_for_dev")
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.gapgpt.app/v1"
-        )
-        self.model = "gapgpt-qwen-3.5"
+        self.provider = llm_provider
 
     def process_user_input(self, conversation_id: str, user_input: str) -> ExecutionPlan:
         """
@@ -59,34 +54,20 @@ Do not execute the actions, just propose the plan.
         # Using structured output or basic JSON mode depending on Gapgpt support
         # For this MVP, we prompt for JSON.
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ],
-                # response_format={"type": "json_object"} # if supported by gapgpt
-            )
-            raw_response = response.choices[0].message.content
+            raw_response = self.provider.generate_plan(system_prompt=system_prompt, user_input=user_input)
             
-            # Simple fallback parser for JSON
-            # In a real app, use function calling or strict JSON parsing
             try:
                 plan_items_data = json.loads(raw_response)
             except json.JSONDecodeError:
-                # Mock fallback if LLM wraps in markdown
                 if "```json" in raw_response:
                     clean_json = raw_response.split("```json")[1].split("```")[0].strip()
                     plan_items_data = json.loads(clean_json)
                 else:
-                    plan_items_data = []
+                    raise ValueError(f"LLM returned invalid JSON: {raw_response}")
 
         except Exception as e:
-            # Fallback for dev environment without actual API Key
-            print(f"Gapgpt LLM call failed (likely missing real API Key): {str(e)}")
-            plan_items_data = [
-                {"tool_name": "CreateTask", "parameters": {"title": f"Dev mock task based on: {user_input}"}}
-            ]
+            print(f"LLM call failed: {str(e)}")
+            raise e
 
         # 5. Generate ExecutionPlan
         plan = ExecutionPlan(
@@ -158,14 +139,7 @@ Do not execute the actions, just propose the plan.
                 # Reprompt LLM
                 prompt = f"You previously generated these parameters: {json.dumps(item.parameters)}. The user requested the following change: {feedback}. Return the updated JSON parameters strictly."
                 try:
-                    response = self.client.chat.completions.create(
-                        model=self.model,
-                        messages=[
-                            {"role": "system", "content": "You are a helpful AI. Output only valid JSON parameters."},
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
-                    raw_response = response.choices[0].message.content
+                    raw_response = self.provider.refine_parameters(original_parameters=item.parameters, feedback=feedback)
                     
                     try:
                         new_params = json.loads(raw_response)
@@ -174,12 +148,10 @@ Do not execute the actions, just propose the plan.
                             clean_json = raw_response.split("```json")[1].split("```")[0].strip()
                             new_params = json.loads(clean_json)
                         else:
-                            new_params = item.parameters # Fallback on parse failure
+                            raise ValueError(f"LLM returned invalid JSON for refinement: {raw_response}")
                 except Exception as e:
-                    print(f"Gapgpt LLM call failed for refinement: {str(e)}")
-                    # Mock refinement for testing when no real API key is present
-                    new_params = item.parameters.copy()
-                    new_params["_refined_feedback"] = feedback
+                    print(f"LLM call failed for refinement: {str(e)}")
+                    raise e
                     
                 # Store old version in history
                 history = list(item.refinement_history) if item.refinement_history else []

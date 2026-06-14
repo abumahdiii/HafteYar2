@@ -60,34 +60,21 @@ def mock_create_task(db_session, context, params):
 registry.register("CreateProject", mock_create_project)
 registry.register("CreateTask", mock_create_task)
 
-# 3. Mock OpenAI inside AIMiddleware
-class MockMessage:
-    content = ""
-class MockChoice:
-    def __init__(self, content):
-        self.message = MockMessage()
-        self.message.content = content
-class MockResponse:
-    def __init__(self, content):
-        self.choices = [MockChoice(content)]
-
-def mock_create(*args, **kwargs):
-    messages = kwargs.get("messages", [])
-    last_msg = messages[-1]["content"]
-    
-    # If it's a refinement reprompt
-    if "The user requested the following change" in last_msg:
-        return MockResponse('{"title": "طراحی UI پیشرفته", "project_id": "${ref_mobile_app.id}"}')
-        
-    return MockResponse("""[
+# 3. Mock Provider inside AIMiddleware
+class MockProvider:
+    def generate_plan(self, system_prompt, user_input):
+        return """[
         {"tool_name": "CreateProject", "parameters": {"name": "Haftyar Mobile App", "project_reference_id": "ref_mobile_app"}},
         {"tool_name": "CreateTask", "parameters": {"title": "طراحی UI", "project_id": "${ref_mobile_app.id}"}}
-    ]""")
+    ]"""
+
+    def refine_parameters(self, original_parameters, feedback):
+        return '{"title": "طراحی UI پیشرفته", "project_id": "${ref_mobile_app.id}"}'
 
 original_init = src.application.ai.middleware.AIMiddleware.__init__
-def new_init(self, db_session):
-    original_init(self, db_session)
-    self.client.chat.completions.create = mock_create
+def new_init(self, db_session, llm_provider=None):
+    original_init(self, db_session, llm_provider)
+    self.provider = MockProvider()
 src.application.ai.middleware.AIMiddleware.__init__ = new_init
 
 

@@ -40,23 +40,19 @@ def test_middleware():
     # Run middleware
     middleware = AIMiddleware(db_session=db)
     
-    # Monkeypatch the gapgpt client call to return a mock JSON response
-    class MockMessage:
-        content = """[
-            {"tool_name": "CreateProject", "parameters": {"name": "Haftyar Mobile App", "project_reference_id": "ref_mobile_app"}},
-            {"tool_name": "CreateTask", "parameters": {"title": "طراحی UI", "project_id": "${ref_mobile_app.id}"}},
-            {"tool_name": "CreateTask", "parameters": {"title": "پیاده‌سازی Flutter", "project_id": "${ref_mobile_app.id}"}},
-            {"tool_name": "CreateTask", "parameters": {"title": "تست نهایی", "project_id": "${ref_mobile_app.id}"}}
-        ]"""
-    class MockChoice:
-        message = MockMessage()
-    class MockResponse:
-        choices = [MockChoice()]
-        
-    def mock_create(*args, **kwargs):
-        return MockResponse()
-        
-    middleware.client.chat.completions.create = mock_create
+    class MockProvider:
+        def generate_plan(self, system_prompt, user_input):
+            return """[
+                {"tool_name": "CreateProject", "parameters": {"name": "Haftyar Mobile App", "project_reference_id": "ref_mobile_app"}},
+                {"tool_name": "CreateTask", "parameters": {"title": "طراحی UI", "project_id": "${ref_mobile_app.id}"}},
+                {"tool_name": "CreateTask", "parameters": {"title": "پیاده‌سازی Flutter", "project_id": "${ref_mobile_app.id}"}},
+                {"tool_name": "CreateTask", "parameters": {"title": "تست نهایی", "project_id": "${ref_mobile_app.id}"}}
+            ]"""
+
+        def refine_parameters(self, original_parameters, feedback):
+            pass
+            
+    middleware.provider = MockProvider()
     
     prompt = """یک پروژه جدید به نام Haftyar Mobile App ایجاد کن و سپس سه تسک زیر را داخل همان پروژه بساز:
 - طراحی UI
