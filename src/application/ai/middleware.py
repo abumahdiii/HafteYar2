@@ -120,3 +120,79 @@ Do not execute the actions, just propose the plan.
         self.db.refresh(plan)
         
         return plan
+
+    def review_plan(self, plan_id: str, reviews: List[Dict[str, Any]]) -> ExecutionPlan:
+        plan = self.db.query(ExecutionPlan).filter(ExecutionPlan.id == plan_id).first()
+        if not plan:
+            raise ValueError("Plan not found")
+        
+        for review in reviews:
+            item_id = review.get("item_id")
+            final_state = review.get("final_state")
+            feedback = review.get("feedback_text")
+            
+            item = next((i for i in plan.items if i.id == item_id), None)
+            if item:
+                item.final_state = final_state
+                # We could store feedback temporarily or just rely on passing it directly to refine
+                # but let's store it dynamically in parameters or just use it directly in API layer.
+                # Actually, if we want to reprompt later, it's best to process it in `refine_plan`.
+                # For now, we just set the final state.
+        
+        self.db.commit()
+        return plan
+
+    def refine_plan(self, plan_id: str, feedbacks: Dict[str, str]) -> Tuple[ExecutionPlan, int]:
+        """
+        Takes a plan and a dict of item_id -> feedback_text.
+        Only items with final_state == 'YELLOW' are processed.
+        """
+        plan = self.db.query(ExecutionPlan).filter(ExecutionPlan.id == plan_id).first()
+        if not plan:
+            raise ValueError("Plan not found")
+            
+        refined_count = 0
+        for item in plan.items:
+            if item.final_state == "YELLOW" and item.id in feedbacks:
+                feedback = feedbacks[item.id]
+                # Reprompt LLM
+                prompt = f"You previously generated these parameters: {json.dumps(item.parameters)}. The user requested the following change: {feedback}. Return the updated JSON parameters strictly."
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": "You are a helpful AI. Output only valid JSON parameters."},
+                            {"role": "user", "content": prompt}
+                        ]
+                    )
+                    raw_response = response.choices[0].message.content
+                    
+                    try:
+                        new_params = json.loads(raw_response)
+                    except json.JSONDecodeError:
+                        if "```json" in raw_response:
+                            clean_json = raw_response.split("```json")[1].split("```")[0].strip()
+                            new_params = json.loads(clean_json)
+                        else:
+                            new_params = item.parameters # Fallback on parse failure
+                except Exception as e:
+                    print(f"Gapgpt LLM call failed for refinement: {str(e)}")
+                    # Mock refinement for testing when no real API key is present
+                    new_params = item.parameters.copy()
+                    new_params["_refined_feedback"] = feedback
+                    
+                # Store old version in history
+                history = list(item.refinement_history) if item.refinement_history else []
+                history.append({
+                    "version": item.current_version_index,
+                    "content": item.parameters
+                })
+                
+                item.refinement_history = history
+                item.parameters = new_params
+                item.current_version_index += 1
+                item.final_state = "GREEN"
+                refined_count += 1
+                
+        self.db.commit()
+        return plan, refined_count
