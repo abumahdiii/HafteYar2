@@ -33,6 +33,10 @@ class ProjectRepository(IProjectRepository):
             return self._to_entity(model)
         return None
 
+    def get_by_team_id(self, team_id: str) -> List[ProjectEntity]:
+        models = self.db.query(Project).filter(Project.team_id == team_id).all()
+        return [self._to_entity(model) for model in models]
+
     def create(self, project: ProjectEntity) -> ProjectEntity:
         model = Project(
             id=project.id,

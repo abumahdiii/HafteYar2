@@ -66,6 +66,10 @@ class IProjectRepository(ABC):
         pass
 
     @abstractmethod
+    def get_by_team_id(self, team_id: str) -> List[ProjectEntity]:
+        pass
+
+    @abstractmethod
     def create(self, project: ProjectEntity) -> ProjectEntity:
         pass
 

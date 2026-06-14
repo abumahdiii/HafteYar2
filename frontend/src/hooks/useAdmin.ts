@@ -25,6 +25,15 @@ export const useUpdateUser = () => {
   });
 };
 
+export const useToggleUserSubscription = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { sub_type: string, duration_days: number } }) => 
+      ApiClient.post(`/admin/users/${id}/subscription/toggle`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+};
+
 // Teams
 export const useAdminTeams = (skip = 0, limit = 50) => {
   return useQuery({

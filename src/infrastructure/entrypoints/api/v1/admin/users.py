@@ -24,7 +24,10 @@ def get_users(
     return UserListResponse(
         items=[UserResponse(
             id=u.id, username=u.username, email=u.email, phone=u.phone,
-            is_admin=u.is_admin, created_at=u.created_at, accounts=[]
+            is_admin=u.is_admin, created_at=u.created_at, accounts=[],
+            subscription_type=getattr(u, 'subscription_type', 'NONE'),
+            subscription_duration_days=getattr(u, 'subscription_duration_days', None),
+            subscription_end_date=getattr(u, 'subscription_end_date', None)
         ) for u in users],
         total=total
     )
@@ -51,13 +54,19 @@ def create_user(
         phone=request.phone,
         password_hash=get_password_hash(request.password) if request.password else None,
         is_admin=request.is_admin,
+        subscription_type="NONE",
+        subscription_duration_days=None,
+        subscription_end_date=None,
         created_at=datetime.utcnow(),
         accounts=[]
     )
     created = repo.create(new_user)
     return UserResponse(
         id=created.id, username=created.username, email=created.email, phone=created.phone,
-        is_admin=created.is_admin, created_at=created.created_at, accounts=[]
+        is_admin=created.is_admin, created_at=created.created_at, accounts=[],
+        subscription_type=created.subscription_type,
+        subscription_duration_days=created.subscription_duration_days,
+        subscription_end_date=created.subscription_end_date
     )
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -94,5 +103,47 @@ def update_user(
     
     return UserResponse(
         id=updated_user.id, username=updated_user.username, email=updated_user.email, phone=updated_user.phone,
-        is_admin=updated_user.is_admin, created_at=updated_user.created_at, accounts=[]
+        is_admin=updated_user.is_admin, created_at=updated_user.created_at, accounts=[],
+        subscription_type=getattr(updated_user, 'subscription_type', 'NONE'),
+        subscription_duration_days=getattr(updated_user, 'subscription_duration_days', None),
+        subscription_end_date=getattr(updated_user, 'subscription_end_date', None)
+    )
+
+from src.infrastructure.entrypoints.schemas.user_schemas import UserSubscriptionToggleRequest
+@router.post("/{user_id}/subscription/toggle", response_model=UserResponse)
+def toggle_user_subscription(
+    user_id: str,
+    request: UserSubscriptionToggleRequest,
+    admin_id: str = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from src.infrastructure.database.models.user import User
+    from datetime import datetime, timedelta
+    
+    user_model = db.query(User).filter(User.id == user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # If the user already has this exact subscription type, it's a request to deactivate
+    if user_model.subscription_type == request.sub_type:
+        user_model.subscription_type = "NONE"
+        user_model.subscription_duration_days = None
+        user_model.subscription_end_date = None
+    else:
+        # Activate new subscription
+        user_model.subscription_type = request.sub_type
+        user_model.subscription_duration_days = request.duration_days
+        user_model.subscription_end_date = datetime.utcnow() + timedelta(days=request.duration_days)
+        
+    db.commit()
+    
+    repo = UserRepository(db)
+    updated_user = repo.get_by_id(user_id)
+    
+    return UserResponse(
+        id=updated_user.id, username=updated_user.username, email=updated_user.email, phone=updated_user.phone,
+        is_admin=updated_user.is_admin, created_at=updated_user.created_at, accounts=[],
+        subscription_type=getattr(updated_user, 'subscription_type', 'NONE'),
+        subscription_duration_days=getattr(updated_user, 'subscription_duration_days', None),
+        subscription_end_date=getattr(updated_user, 'subscription_end_date', None)
     )

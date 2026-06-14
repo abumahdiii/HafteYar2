@@ -13,6 +13,9 @@ class UserResponse(BaseModel):
     email: Optional[str]
     phone: Optional[str]
     is_admin: bool
+    subscription_type: str = "NONE"
+    subscription_duration_days: Optional[int] = None
+    subscription_end_date: Optional[datetime] = None
     created_at: datetime
     accounts: List[UserAccountResponse] = []
 
@@ -22,6 +25,10 @@ class UserCreateRequest(BaseModel):
     phone: Optional[str] = None
     password: Optional[str] = None
     is_admin: bool = False
+
+class UserSubscriptionToggleRequest(BaseModel):
+    sub_type: str # 'BASIC' or 'PRO'
+    duration_days: int = 30
 
 class UserUpdateRequest(BaseModel):
     username: Optional[str] = None

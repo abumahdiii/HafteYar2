@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from src.infrastructure.database.session import Base
@@ -13,6 +13,9 @@ class User(Base):
     phone = Column(String(11), unique=True, nullable=True, index=True)
     password_hash = Column(String, nullable=True)
     is_admin = Column(Boolean, default=False)
+    subscription_type = Column(String, default="NONE", nullable=False)
+    subscription_duration_days = Column(Integer, nullable=True)
+    subscription_end_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     accounts = relationship("UserAccount", back_populates="user", cascade="all, delete-orphan")

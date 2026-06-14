@@ -176,7 +176,23 @@ class AIMiddleware:
         # -- Subscriptions Navigation --
         if text == "⚙️ اشتراک‌ها":
             self._update_session(sess, "IDLE", {})
-            return GatewayResponse(text="بخش اشتراک‌ها در حال توسعه است. می‌توانید وضعیت اشتراک تیم‌هایتان را از اینجا مدیریت کنید.", buttons=subscriptions_menu)
+            return GatewayResponse(text="بخش اشتراک‌ها: لطفاً گزینه مورد نظر را انتخاب کنید.", buttons=subscriptions_menu)
+
+        if text == "وضعیت اشتراک":
+            teams = self.team_use_case.get_user_teams(user_id=conv.user_id)
+            if not teams:
+                return GatewayResponse(text="شما در هیچ تیمی عضو نیستید.", buttons=subscriptions_menu)
+            status_text = "وضعیت اشتراک تیم‌های شما:\n"
+            for t in teams:
+                sub_status = "فعال ✅" if t.is_subscription_valid else "منقضی شده ❌"
+                status_text += f"- تیم {t.name}: {sub_status}\n"
+            return GatewayResponse(text=status_text, buttons=subscriptions_menu)
+
+        if text == "خرید اشتراک":
+            return GatewayResponse(
+                text="برای خرید یا تمدید اشتراک Pro لطفاً به پنل وب مراجعه کنید یا از طریق لینک پرداخت زیر اقدام نمایید:\nhttps://example.com/pay",
+                buttons=subscriptions_menu
+            )
 
         # -- State Machine Handlers --
         if sess.state == "WAITING_TEAM_NAME":
@@ -192,16 +208,16 @@ class AIMiddleware:
                 return GatewayResponse(text="عنوان تسک نمی‌تواند خالی باشد:")
             
             project_id = sess.state_data.get("project_id")
-            # For simplicity, if we don't have a list, just pass None and UseCase should handle it or fail.
-            # Real implementation might need a list selection step.
+            list_id = sess.state_data.get("list_id")
+            
             task = self.task_use_case.create_task(
                 title=text,
                 project_id=project_id,
                 creator_id=conv.user_id,
-                list_id=None # Let UseCase generate default if implemented or requires fixing
+                list_id=list_id
             )
             self._update_session(sess, "IDLE", {})
-            return GatewayResponse(text=f"✅ تسک '{task.title}' ایجاد شد.", buttons=tasks_menu)
+            return GatewayResponse(text=f"✅ تسک '{task.title}' با موفقیت در پروژه عمومی تیم ایجاد شد.", buttons=tasks_menu)
 
         # -- Callbacks --
         if request.is_callback:
@@ -211,9 +227,36 @@ class AIMiddleware:
             
             if text.startswith("selteam_"):
                 team_id = text.split("_")[1]
-                self._update_session(sess, "WAITING_TASK_TITLE", {"team_id": team_id, "project_id": f"dummy_proj_for_{team_id}"})
+                # Fetch default project and list
+                projects = self.team_use_case.project_repo.get_by_team_id(team_id)
+                if not projects:
+                    return GatewayResponse(text="خطا: هیچ پروژه‌ای برای این تیم یافت نشد.", buttons=tasks_menu)
+                
+                project = projects[0]
+                if not project.lists:
+                    return GatewayResponse(text="خطا: هیچ لیستی در پروژه این تیم یافت نشد.", buttons=tasks_menu)
+                    
+                list_id = project.lists[0].id
+                
+                self._update_session(sess, "WAITING_TASK_TITLE", {"team_id": team_id, "project_id": project.id, "list_id": list_id})
                 return GatewayResponse(text="عنوان تسک جدید را وارد کنید:")
             
+            if text.startswith("viewteam_"):
+                team_id = text.split("_")[1]
+                projects = self.team_use_case.project_repo.get_by_team_id(team_id)
+                if not projects:
+                    return GatewayResponse(text="هیچ پروژه‌ای در این تیم یافت نشد.", buttons=tasks_menu)
+                    
+                tasks = self.task_use_case.get_tasks_for_project(projects[0].id)
+                if not tasks:
+                    return GatewayResponse(text="هیچ تسکی در این پروژه وجود ندارد.", buttons=tasks_menu)
+                
+                task_list_str = "لیست تسک‌های شما:\n"
+                for i, tk in enumerate(tasks, 1):
+                    task_list_str += f"{i}. {tk.title} [{tk.status.value}]\n"
+                
+                return GatewayResponse(text=task_list_str, buttons=tasks_menu)
+
             return GatewayResponse(text="عملیات ناشناخته", buttons=default_buttons)
 
         # -- AI Flow --

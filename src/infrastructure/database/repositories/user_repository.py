@@ -16,6 +16,9 @@ class UserRepository(IUserRepository):
             phone=model.phone,
             password_hash=model.password_hash,
             is_admin=model.is_admin,
+            subscription_type=getattr(model, 'subscription_type', 'NONE'),
+            subscription_duration_days=getattr(model, 'subscription_duration_days', None),
+            subscription_end_date=getattr(model, 'subscription_end_date', None),
             created_at=model.created_at,
             accounts=[
                 UserAccountEntity(
@@ -35,6 +38,9 @@ class UserRepository(IUserRepository):
             phone=entity.phone,
             password_hash=entity.password_hash,
             is_admin=entity.is_admin,
+            subscription_type=entity.subscription_type,
+            subscription_duration_days=entity.subscription_duration_days,
+            subscription_end_date=entity.subscription_end_date,
             created_at=entity.created_at
         )
 

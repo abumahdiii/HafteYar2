@@ -17,5 +17,8 @@ class UserEntity:
     phone: Optional[str] = None
     password_hash: Optional[str] = None
     is_admin: bool = False
+    subscription_type: str = "NONE"
+    subscription_duration_days: Optional[int] = None
+    subscription_end_date: Optional[datetime] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     accounts: List[UserAccountEntity] = field(default_factory=list)
